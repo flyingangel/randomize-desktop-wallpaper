@@ -18,6 +18,9 @@
 
 DEBUG=true
 
+source argparser/argparser.sh
+parse_args "$@"
+
 function isGNOME {
     [[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
 }
@@ -70,7 +73,7 @@ function fetchImageAsJSON {
     keyword="universe"
     #todo convert space to url entities
     useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
-    link="www.google.com/search?q=${keyword}&tbm=isch"
+    [[ ! -z $1 ]] && link="www.google.com/search?q=${keyword}&tbs=isz:ex,iszw:$1,iszh:$2&tbm=isch" || link="www.google.com/search?q=${keyword}&tbm=isch"
     imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$link" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
 
     IFS=$'\n'
@@ -83,7 +86,7 @@ function fetchImageAsJSON {
 function fetchImages {
     local temp url
 
-    fetchImageAsJSON
+    fetchImageAsJSON $1 $2
 
     images=()
 
@@ -97,6 +100,13 @@ function fetchImages {
 
         if $DEBUG; then echo "Found $url"; fi
     done
+}
+
+function getScreenRes {
+  read res < <(cat /sys/class/graphics/fb0/virtual_size);
+  local w="${res%%,*}"
+  local h="${res#*,}"
+  fetchImages $w $h
 }
 
 function pickRandomImage {
@@ -120,6 +130,10 @@ function setDesktopBackground {
 
 checkCompatibility || exit 1
 #fetch image return array of images
-fetchImages
+if [[ -z $quality ]] && [[ -z $bestfit ]]; then
+  getScreenRes
+else
+  fetchImages
+fi
 pickRandomImage
 setDesktopBackground "$result"
