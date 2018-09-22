@@ -19,22 +19,45 @@
 DEBUG=true
 
 function isGNOME {
-    [ -x "$(command -v gsettings)" ] || return 1
+    [[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
 }
 
 function isPLASMA {
-    #todo
-    return 1
+    [[ $XDG_CURRENT_DESKTOP == KDE ]] || return 1
+}
+
+function reconf() {
+  readonly output=/tmp/plasma-org.kde.plasma.desktop-appletsrc
+  readonly config=~/.config/plasma-org.kde.plasma.desktop-appletsrc
+  [[ ! -e $output ]] || rm $output
+  while IFS= read line
+  do
+      if [[ $line != "Image=file://"* ]]; then
+        echo $line >> $output
+      else
+        rm ${line#*Image=file://}
+        echo "$1" >> $output
+      fi
+  done <"$config"
+  rm $config && mv $output ~/.config
+  kquitapp5 plasmashell
+  kstart plasmashell
+}
+
+function setPlasmaWall {
+  wget --directory-prefix=$HOME/.cache $1 2>/dev/null
+  wall=~/.cache/"${1##*/}"
+  reconf "Image=file://$wall"
 }
 
 function checkCompatibility {
     if isGNOME; then
         result="GNOME"
-        
+
         elif isPLASMA; then
         result="PLASMA"
     else
-        echo "Unsupported system. This program requires Gnome desktop"
+        echo "Unsupported system. This program requires Gnome or Plasma desktop"
         return 1
     fi
 }
@@ -42,14 +65,14 @@ function checkCompatibility {
 #fetch image from google
 function fetchImageAsJSON {
     resultArray=()
-    
+
     count=10
     keyword="universe"
     #todo convert space to url entities
     useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
     link="www.google.com/search?q=${keyword}&tbm=isch"
     imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$link" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
-    
+
     IFS=$'\n'
     for i in $imagelink; do
         resultArray+=("$i")
@@ -59,11 +82,11 @@ function fetchImageAsJSON {
 #return images list as array
 function fetchImages {
     local temp url
-    
+
     fetchImageAsJSON
-    
+
     images=()
-    
+
     #get url from JSON
     for i in "${resultArray[@]}"; do
         #fetch json key & value
@@ -71,14 +94,14 @@ function fetchImages {
         #fetch value
         url=${temp##*|}
         images+=("$url")
-        
+
         if $DEBUG; then echo "Found $url"; fi
     done
 }
 
 function pickRandomImage {
     local size index
-    
+
     size=${#images[@]}
     index=$((RANDOM % "$size"))
     result=${images[$index]}
@@ -87,8 +110,10 @@ function pickRandomImage {
 function setDesktopBackground {
     if isGNOME; then
         gsettings set org.gnome.desktop.background picture-uri "$1"
+      elif isPLASMA; then
+        setPlasmaWall "$1"
     fi
-    
+
     if $DEBUG; then echo "Set $1 as background"; fi
 }
 
