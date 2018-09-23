@@ -9,7 +9,7 @@ This script will download dependancies, ask for configurations and install a CRO
 ## Documentation
 Syntax: `bash randomizedesktop.sh keyword [--quality value]`
 
-Manual run to test this app. The final options should be configured in
+Manual run to test this app. The final options should be configured in CRON
 
 
 #### Argument

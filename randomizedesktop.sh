@@ -88,7 +88,6 @@ function fetchImageAsJSON() {
 
 	$DEBUG && echo -e "URL (paste this on browser): $url\n"
 
-	count=10
 	#todo keyword may contain space, need to convert to url entities
 	useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
 	#request to server
@@ -97,7 +96,7 @@ function fetchImageAsJSON() {
 Request: wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count
 EOF
 	)
-	imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
+	imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http')
 	$DEBUG && echo $wget && echo
 
 	#exit if 0 result
@@ -133,23 +132,6 @@ function fetchImages() {
 	done
 }
 
-function detectScreenRes() {
-	read -r res < <(cat /sys/class/graphics/fb0/virtual_size)
-	# local w="${res%%,*}"
-	local h="${res#*,}"
-
-	# Tell the function how many megapixels to look for
-	# [[ $h != 720 ]] || fetchImages $w $h
-	[[ $h != 768 ]] || result="xga"
-	[[ $h != 1080 ]] || result=2
-	[[ $h != 1440 ]] || result=4
-	[[ $h != 2160 ]] || result=8
-	[[ $h != 4320 ]] || result=40
-
-	#should we check $w too?
-	#todo dynamic detection and not hardcoded
-}
-
 function pickRandomImage() {
 	local size index
 
@@ -169,13 +151,13 @@ function setDesktopBackground() {
 }
 
 checkCompatibility || exit 1
-#fetch image return array of images
-[[ ! -z $argument1 ]] || exit 1
+[[ ! -z $argument1 ]] || (echo "Missing param keyword" && exit 1)
 
 #autoset quality if mode auto
 if [[ -z $quality || $quality == "auto" ]]; then
-	detectScreenRes
-	quality="ge:$result"
+	#screen resolution
+	read -r res < <(cat /sys/class/graphics/fb0/virtual_size)
+	quality="eq:$res"
 fi
 
 fetchImages $argument1 $quality
