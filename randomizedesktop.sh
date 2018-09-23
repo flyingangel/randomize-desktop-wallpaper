@@ -90,7 +90,7 @@ function fetchImages {
     temp=$(echo "$i" | sed 's/\\\\\//\//g' | sed 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed 's/\"\:\"/\|/g' | sed 's/[\,]/ /g' | sed 's/\"//g' | grep -w "ou")
     #fetch value
     url=${temp##*|}
-    [[ $url =~ "?" ]] && images+=("${url%%?*}") || images+=("$url")
+    [[ $url =~ "?" ]] && images+=("${url%%"?"*}") || images+=("$url")
 
     if $DEBUG; then echo "Found $url"; fi
   done
