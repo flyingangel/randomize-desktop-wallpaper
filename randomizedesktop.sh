@@ -14,19 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#Usage: bash randomizedesktop.sh "keyword"
-
 DEBUG=true
 
 source argparser/argparser.sh
 parse_args "$@"
 
 function isGNOME {
-    [[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
+  [[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
 }
 
 function isPLASMA {
-    [[ $XDG_CURRENT_DESKTOP == KDE ]] || return 1
+  [[ $XDG_CURRENT_DESKTOP == KDE ]] || return 1
 }
 
 function reconf() {
@@ -54,52 +52,48 @@ function setPlasmaWall {
 }
 
 function checkCompatibility {
-    if isGNOME; then
-        result="GNOME"
-
-        elif isPLASMA; then
-        result="PLASMA"
-    else
-        echo "Unsupported system. This program requires Gnome or Plasma desktop"
-        return 1
-    fi
+  if ! isGNOME && ! isPLASMA; then
+    echo "Unsupported DE. This program requires GNOME 3 or Plasma 5."
+    return 1
+  fi
 }
 
 #fetch image from google
 function fetchImageAsJSON {
-    resultArray=()
+  resultArray=()
 
-    count=10
-    keyword="universe"
-    #todo convert space to url entities
-    useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
-    [[ ! -z $1 ]] && link="www.google.com/search?q=${keyword}&tbs=isz:ex,iszw:$1,iszh:$2&tbm=isch" || link="www.google.com/search?q=${keyword}&tbm=isch"
-    imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$link" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
+  count=10
+  keyword="universe"
+  #todo convert space to url entities
+  useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
+  [[ ! -z $1 ]] && link="www.google.com/search?q=${keyword}&tbs=isz:ex,iszw:$1,iszh:$2&tbm=isch" || link="www.google.com/search?q=${keyword}&tbm=isch"
+  imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$link" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
 
-    IFS=$'\n'
-    for i in $imagelink; do
-        resultArray+=("$i")
-    done
+  IFS=$'\n'
+  for i in $imagelink; do
+    resultArray+=("$i")
+  done
 }
 
 #return images list as array
 function fetchImages {
-    local temp url
+  local temp url
 
-    fetchImageAsJSON $1 $2
+  fetchImageAsJSON $1 $2
 
-    images=()
+  images=()
 
-    #get url from JSON
-    for i in "${resultArray[@]}"; do
-        #fetch json key & value
-        temp=$(echo "$i" | sed 's/\\\\\//\//g' | sed 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed 's/\"\:\"/\|/g' | sed 's/[\,]/ /g' | sed 's/\"//g' | grep -w "ou")
-        #fetch value
-        url=${temp##*|}
-        images+=("$url")
+  #get url from JSON
+  for i in "${resultArray[@]}"; do
 
-        if $DEBUG; then echo "Found $url"; fi
-    done
+    #fetch json key & value
+    temp=$(echo "$i" | sed 's/\\\\\//\//g' | sed 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed 's/\"\:\"/\|/g' | sed 's/[\,]/ /g' | sed 's/\"//g' | grep -w "ou")
+    #fetch value
+    url=${temp##*|}
+    images+=("$url")
+
+    if $DEBUG; then echo "Found $url"; fi
+  done
 }
 
 function getScreenRes {
@@ -110,30 +104,26 @@ function getScreenRes {
 }
 
 function pickRandomImage {
-    local size index
+  local size index
 
-    size=${#images[@]}
-    index=$((RANDOM % "$size"))
-    result=${images[$index]}
+  size=${#images[@]}
+  index=$((RANDOM % "$size"))
+  result=${images[$index]}
 }
 
 function setDesktopBackground {
-    if isGNOME; then
-        gsettings set org.gnome.desktop.background picture-uri "$1"
-      elif isPLASMA; then
-        setPlasmaWall "$1"
-    fi
+  if isGNOME; then
+    gsettings set org.gnome.desktop.background picture-uri "$1"
+  elif isPLASMA; then
+    setPlasmaWall "$1"
+  fi
 
-    if $DEBUG; then echo "Set $1 as background"; fi
+  if $DEBUG; then echo "Set $1 as background"; fi
 }
 
 
 checkCompatibility || exit 1
 #fetch image return array of images
-if [[ -z $quality ]] && [[ -z $bestfit ]]; then
-  getScreenRes
-else
-  fetchImages
-fi
+[[ -z $quality ]] && [[ -z $bestfit ]] && getScreenRes || fetchImages
 pickRandomImage
 setDesktopBackground "$result"
