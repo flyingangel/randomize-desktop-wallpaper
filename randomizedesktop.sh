@@ -20,12 +20,12 @@ DEBUG=true
 source argparser/argparser.sh
 parse_args "$@"
 
-function isGNOME {
-  [[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
+function isGNOME() {
+	[[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
 }
 
-function isPLASMA {
-  [[ $XDG_CURRENT_DESKTOP == KDE ]] || return 1
+function isPLASMA() {
+	[[ $XDG_CURRENT_DESKTOP == KDE ]] || return 1
 }
 
 function reconf() {
@@ -51,97 +51,140 @@ function setPlasmaWall() {
 	reconf "Image=file://$wall"
 }
 
-function checkCompatibility {
-  if ! isGNOME && ! isPLASMA; then
-    echo "Unsupported DE. This program requires GNOME 3 or Plasma 5."
-    return 1
-  fi
+function checkCompatibility() {
+	if ! isGNOME && ! isPLASMA; then
+		echo "Unsupported DE. This program requires GNOME 3 or Plasma 5."
+		return 1
+	fi
 }
 
 #fetch image from google
-function fetchImageAsJSON {
-  resultArray=()
+function fetchImageAsJSON() {
+	local url value
+	local keyword=$1
+	local quality=$2
 
-  count=10
-  #keyword="universe"
-  #todo convert space to url entities
-  useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
-  [[ ! -z $1 ]] && link="www.google.com/search?q=${keyword}&tbs=isz:ex,iszw:$1,iszh:$2&tbm=isch" || link="www.google.com/search?q=${keyword}&tbm=isch"
-  imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$link" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
-  [[ ! -z $imagelink ]] || exit
+	resultArray=()
 
-  IFS=$'\n'
-  for i in $imagelink; do
-    resultArray+=("$i")
-  done
+	#the root URL
+	url="www.google.com/search?q=$keyword&tbm=isch"
+
+	if [[ $quality == "high" ]]; then
+		url="$url&tbs=isz:l"
+	elif [[ $quality == "medium" ]]; then
+		url="$url&tbs=isz:m"
+		#quality
+	elif [[ $quality == ge:* ]]; then
+		#mp could be equal xga
+		value=${quality#*ge:}
+		#if is number
+		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
+
+		url="$url&tbs=isz:lt,islt:$value"
+	elif [[ $quality == eq:* ]]; then
+		value=${quality#*eq:}
+		url="$url&tbs=isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+	fi
+
+	$DEBUG && echo -e "URL (paste this on browser): $url\n"
+
+	count=10
+	#todo keyword may contain space, need to convert to url entities
+	useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
+	#request to server
+	wget=$(
+		cat <<EOF
+Request: wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count
+EOF
+	)
+	imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
+	$DEBUG && echo $wget && echo
+
+	#exit if 0 result
+	[[ ! -z $imagelink ]] || return 1
+
+	IFS=$'\n'
+	for i in $imagelink; do
+		resultArray+=("$i")
+	done
 }
 
 #return images list as array
-function fetchImages {
-  local temp url
+function fetchImages() {
+	local temp url
 
-  fetchImageAsJSON $1 $2
+	fetchImageAsJSON $1 $2
 
-  images=()
+	#return if fail
+	[[ $? -eq 1 ]] && return 1
 
-  #get url from JSON
-  for i in "${resultArray[@]}"; do
+	images=()
 
-    #fetch json key & value
-    temp=$(echo "$i" | sed 's/\\\\\//\//g' | sed 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed 's/\"\:\"/\|/g' | sed 's/[\,]/ /g' | sed 's/\"//g' | grep -w "ou")
-    #fetch value
-    url=${temp##*|}
-    [[ $url =~ "?" ]] && images+=("${url%%"?"*}") || images+=("$url")
+	#get url from JSON
+	for i in "${resultArray[@]}"; do
+		#fetch json key & value
+		temp=$(echo "$i" | sed 's/\\\\\//\//g' | sed 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed 's/\"\:\"/\|/g' | sed 's/[\,]/ /g' | sed 's/\"//g' | grep -w "ou")
+		#fetch value
+		url=${temp##*|}
+		[[ $url =~ "?" ]] && url=${url%%"?"*}
+		images+=("$url")
 
-    if $DEBUG; then echo "Found $url"; fi
-  done
+		if $DEBUG; then echo -e "Found $url"; fi
+	done
 }
 
-function getScreenRes() {
-	read res < <(cat /sys/class/graphics/fb0/virtual_size)
-	local w="${res%%,*}"
+function detectScreenRes() {
+	read -r res < <(cat /sys/class/graphics/fb0/virtual_size)
+	# local w="${res%%,*}"
 	local h="${res#*,}"
 
-  # Tell the function how many megapixels to look for
-  [[ $h != 720 ]] || fetchImages $w $h
-  [[ $h != 768 ]] || fetchImages $w $h
-  [[ $h != 1080 ]] || fetchImages 2
-  [[ $h != 1440 ]] || fetchImages 4
-  [[ $h != 2160 ]] || fetchImages 8
-  [[ $h != 4320 ]] || fetchImages 40
+	# Tell the function how many megapixels to look for
+	# [[ $h != 720 ]] || fetchImages $w $h
+	[[ $h != 768 ]] || result="xga"
+	[[ $h != 1080 ]] || result=2
+	[[ $h != 1440 ]] || result=4
+	[[ $h != 2160 ]] || result=8
+	[[ $h != 4320 ]] || result=40
+
+	#should we check $w too?
+	#todo dynamic detection and not hardcoded
 }
 
-function pickRandomImage {
-  local size index
+function pickRandomImage() {
+	local size index
 
-  size=${#images[@]}
-  index=$((RANDOM % "$size"))
-  result=${images[$index]}
+	size=${#images[@]}
+	index=$((RANDOM % "$size"))
+	result=${images[$index]}
 }
 
-function setDesktopBackground {
-  if isGNOME; then
-    gsettings set org.gnome.desktop.background picture-uri "$1"
-  elif isPLASMA; then
-    setPlasmaWall "$1"
-  fi
+function setDesktopBackground() {
+	if isGNOME; then
+		gsettings set org.gnome.desktop.background picture-uri "$1"
+	elif isPLASMA; then
+		setPlasmaWall "$1"
+	fi
 
-  if $DEBUG; then echo "Set $1 as background"; fi
+	$DEBUG && echo && echo "Set $1 as background"
 }
 
 checkCompatibility || exit 1
 #fetch image return array of images
-[[ ! -z $keyword ]] || exit
-if [[ -z $quality ]] || [[ $quality == auto ]]; then
-   getScreenRes
- elif [[ $quality == high ]]; then
-   fetchImages 8
- elif [[ $quality == medium ]]; then
-   fetchImages 2
- elif [[ $quality == "ge:"* ]]; then
-   fetchImages "${quality#*ge:}"
- elif [[ $quality == "eq:"* ]]; then
-   fetchImages ${quality%%,*} ${quality#*,}
- fi
+[[ ! -z $argument1 ]] || exit 1
+
+#autoset quality if mode auto
+if [[ -z $quality || $quality == "auto" ]]; then
+	detectScreenRes
+	quality="ge:$result"
+fi
+
+fetchImages $argument1 $quality
+
+#exit if 0 result
+if [[ $? -eq 1 ]]; then
+	echo "Found 0 image"
+	exit 1
+fi
+
 pickRandomImage
 setDesktopBackground "$result"
