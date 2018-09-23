@@ -63,11 +63,12 @@ function fetchImageAsJSON {
   resultArray=()
 
   count=10
-  keyword="universe"
+  #keyword="universe"
   #todo convert space to url entities
   useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
   [[ ! -z $1 ]] && link="www.google.com/search?q=${keyword}&tbs=isz:ex,iszw:$1,iszh:$2&tbm=isch" || link="www.google.com/search?q=${keyword}&tbm=isch"
   imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$link" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count)
+  [[ ! -z $imagelink ]] || exit
 
   IFS=$'\n'
   for i in $imagelink; do
@@ -100,6 +101,14 @@ function getScreenRes() {
 	read res < <(cat /sys/class/graphics/fb0/virtual_size)
 	local w="${res%%,*}"
 	local h="${res#*,}"
+
+  # Tell the function how many megapixels to look for
+  [[ $h != 720 ]] || fetchImages $w $h
+  [[ $h != 768 ]] || fetchImages $w $h
+  [[ $h != 1080 ]] || fetchImages 2
+  [[ $h != 1440 ]] || fetchImages 4
+  [[ $h != 2160 ]] || fetchImages 8
+  [[ $h != 4320 ]] || fetchImages 40
 }
 
 function pickRandomImage {
@@ -122,6 +131,17 @@ function setDesktopBackground {
 
 checkCompatibility || exit 1
 #fetch image return array of images
-[[ -z $quality ]] && [[ -z $bestfit ]] && getScreenRes || fetchImages
+[[ ! -z $keyword ]] || exit
+if [[ -z $quality ]] || [[ $quality == auto ]]; then
+   getScreenRes
+ elif [[ $quality == high ]]; then
+   fetchImages 8
+ elif [[ $quality == medium ]]; then
+   fetchImages 2
+ elif [[ $quality == "ge:"* ]]; then
+   fetchImages "${quality#*ge:}"
+ elif [[ $quality == "eq:"* ]]; then
+   fetchImages ${quality%%,*} ${quality#*,}
+ fi
 pickRandomImage
 setDesktopBackground "$result"
