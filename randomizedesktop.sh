@@ -69,10 +69,6 @@ function fetchImageAsJSON() {
 	#the root URL
 	url="www.google.com/search?q=$keyword&tbm=isch"
 
-	if [[ ! -z $3 && $2 != high && $2 != medium && $2 != ge:* && $2 != eq:* ]]; then
-		value=${quality#*eq:}
-		url="$url&tbs=ic:specific,isc:$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
-	fi
 
 	if [[ $quality == "high" ]]; then
 		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:l" || url="$url&tbs=isz:l"
@@ -89,6 +85,9 @@ function fetchImageAsJSON() {
 	elif [[ $quality == eq:* ]]; then
 		value=${quality#*eq:}
 		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}" || url="$url&tbs=isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+	else
+		value=${quality#*eq:}
+		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	fi
 
 	$DEBUG && echo -e "URL (paste this on browser): $url\n"
