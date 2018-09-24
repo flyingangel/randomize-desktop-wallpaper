@@ -160,7 +160,7 @@ if [[ -z $quality || $quality == "auto" ]]; then
 	quality="eq:$res"
 fi
 
-fetchImages $argument1 $quality
+[[ $1 =~ " " ]] && fetchImages "${argument1// /+}" $quality || fetchImages $argument1 $quality
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
