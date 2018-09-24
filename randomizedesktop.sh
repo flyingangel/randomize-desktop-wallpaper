@@ -69,10 +69,15 @@ function fetchImageAsJSON() {
 	#the root URL
 	url="www.google.com/search?q=$keyword&tbm=isch"
 
+	if [[ ! -z $3 && $2 != high && $2 != medium && $2 != ge:* && $2 != eq:* ]]; then
+		value=${quality#*eq:}
+		url="$url&tbs=ic:specific,isc:$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+	fi
+
 	if [[ $quality == "high" ]]; then
-		url="$url&tbs=isz:l"
+		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:l" || url="$url&tbs=isz:l"
 	elif [[ $quality == "medium" ]]; then
-		url="$url&tbs=isz:m"
+		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:m" || url="$url&tbs=isz:m"
 		#quality
 	elif [[ $quality == ge:* ]]; then
 		#mp could be equal xga
@@ -80,15 +85,14 @@ function fetchImageAsJSON() {
 		#if is number
 		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
 
-		url="$url&tbs=isz:lt,islt:$value"
+		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:lt,islt:$value" || url="$url&tbs=isz:lt,islt:$value"
 	elif [[ $quality == eq:* ]]; then
 		value=${quality#*eq:}
-		url="$url&tbs=isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}" || url="$url&tbs=isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	fi
 
 	$DEBUG && echo -e "URL (paste this on browser): $url\n"
 
-	#todo keyword may contain space, need to convert to url entities
 	useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
 	#request to server
 	wget=$(
@@ -112,7 +116,7 @@ EOF
 function fetchImages() {
 	local temp url
 
-	fetchImageAsJSON $1 $2
+	fetchImageAsJSON $1 $2 $3
 
 	#return if fail
 	[[ $? -eq 1 ]] && return 1
@@ -160,7 +164,7 @@ if [[ -z $quality || $quality == "auto" ]]; then
 	quality="eq:$res"
 fi
 
-[[ $1 =~ " " ]] && fetchImages "${argument1// /+}" $quality || fetchImages $argument1 $quality
+[[ $1 =~ " " ]] && fetchImages "${argument1// /+}" $quality $color || fetchImages $argument1 $quality $color
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
