@@ -82,9 +82,6 @@ function fetchImageAsJSON() {
 		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
 
 		url="$url&tbs=$3,isz:lt,islt:$value"
-	elif [[ $quality == eq:* ]]; then
-		value=${quality#*eq:}
-		url="$url&tbs=$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	else
 		url="$url&tbs=$3,isz:ex,iszw:${2%%,*},iszh:${2#*,}"
 	fi
@@ -161,7 +158,7 @@ if [[ -z $quality || $quality == "auto" ]]; then
 	read -r quality < <(cat /sys/class/graphics/fb0/virtual_size)
 fi
 
-[[ $argument1 =~ " " ]] && [[ ! -z $color ]] && fetchImages "${argument1// /+}" $quality ic:specific,isc:$color || fetchImages $argument1 $quality
+[[ $argument1 =~ " " ]] && [[ ! -z $color ]] || [[ ! -z $color ]] && fetchImages "${argument1// /+}" $quality ic:specific,isc:$color || fetchImages $argument1 $quality
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
