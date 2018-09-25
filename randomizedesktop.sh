@@ -36,7 +36,7 @@ function reconf() {
 		if [[ $line != "Image=file://"* ]]; then
 			echo $line >>$output
 		else
-			rm ${line#*Image=file://}
+			rm ${line#*Image=file://}*
 			echo "$1" >>$output
 		fi
 	done <"$config"
