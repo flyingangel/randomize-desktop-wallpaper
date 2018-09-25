@@ -71,9 +71,9 @@ function fetchImageAsJSON() {
 
 
 	if [[ $quality == "high" ]]; then
-		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:l" || url="$url&tbs=isz:l"
+		url="$url&tbs=$3,isz:l"
 	elif [[ $quality == "medium" ]]; then
-		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:m" || url="$url&tbs=isz:m"
+		url="$url&tbs=$3,isz:m"
 		#quality
 	elif [[ $quality == ge:* ]]; then
 		#mp could be equal xga
@@ -81,13 +81,13 @@ function fetchImageAsJSON() {
 		#if is number
 		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
 
-		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:lt,islt:$value" || url="$url&tbs=isz:lt,islt:$value"
+		url="$url&tbs=$3,isz:lt,islt:$value"
 	elif [[ $quality == eq:* ]]; then
 		value=${quality#*eq:}
-		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}" || url="$url&tbs=isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+		url="$url&tbs=$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	else
 		value=${quality#*eq:}
-		[[ ! -z $3 ]] && url="$url&tbs=ic:specific,isc:$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+		url="$url&tbs=$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	fi
 
 	$DEBUG && echo -e "URL (paste this on browser): $url\n"
@@ -163,7 +163,7 @@ if [[ -z $quality || $quality == "auto" ]]; then
 	quality="eq:$res"
 fi
 
-[[ $1 =~ " " ]] && fetchImages "${argument1// /+}" $quality $color || fetchImages $argument1 $quality $color
+[[ $1 =~ " " ]] && [[ ! -z $color ]] && fetchImages "${argument1// /+}" $quality ic:specific,isc:$color || fetchImages $argument1 $quality ic:specific,isc:$color
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
