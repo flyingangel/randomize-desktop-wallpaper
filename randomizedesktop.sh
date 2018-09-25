@@ -161,7 +161,7 @@ if [[ -z $quality || $quality == "auto" ]]; then
 	read -r quality < <(cat /sys/class/graphics/fb0/virtual_size)
 fi
 
-[[ $argument1 =~ " " ]] && [[ ! -z $color ]] && fetchImages "${argument1// /+}" $quality ic:specific,isc:$color || fetchImages $argument1 $quality ic:specific,isc:$color
+[[ $argument1 =~ " " ]] && [[ ! -z $color ]] && fetchImages "${argument1// /+}" $quality ic:specific,isc:$color || fetchImages $argument1 $quality
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
