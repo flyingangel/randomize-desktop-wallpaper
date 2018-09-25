@@ -86,8 +86,7 @@ function fetchImageAsJSON() {
 		value=${quality#*eq:}
 		url="$url&tbs=$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	else
-		value=${quality#*eq:}
-		url="$url&tbs=$3,isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+		url="$url&tbs=$3,isz:ex,iszw:${2%%,*},iszh:${2#*,}"
 	fi
 
 	$DEBUG && echo -e "URL (paste this on browser): $url\n"
@@ -159,15 +158,14 @@ checkCompatibility || exit 1
 #autoset quality if mode auto
 if [[ -z $quality || $quality == "auto" ]]; then
 	#screen resolution
-	read -r res < <(cat /sys/class/graphics/fb0/virtual_size)
-	quality="eq:$res"
+	read -r quality < <(cat /sys/class/graphics/fb0/virtual_size)
 fi
 
-[[ $1 =~ " " ]] && [[ ! -z $color ]] && fetchImages "${argument1// /+}" $quality ic:specific,isc:$color || fetchImages $argument1 $quality ic:specific,isc:$color
+[[ $argument1 =~ " " ]] && [[ ! -z $color ]] && fetchImages "${argument1// /+}" $quality ic:specific,isc:$color || fetchImages $argument1 $quality ic:specific,isc:$color
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
-	echo "Found 0 image"
+	echo "Found 0 images"
 	exit 1
 fi
 
