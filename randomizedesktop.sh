@@ -171,7 +171,10 @@ function setDesktopBackground() {
 }
 
 checkCompatibility || exit 1
-[[ ! -z $argument1 ]] || (echo "Missing param keyword" && exit 1)
+if [[ -z $argument1 ]]; then
+	echo "Missing param keyword"
+	exit 1
+fi
 
 #autoset quality if mode auto
 if [[ -z $quality || $quality == "auto" ]]; then
