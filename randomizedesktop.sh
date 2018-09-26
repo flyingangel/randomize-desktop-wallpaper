@@ -67,24 +67,26 @@ function fetchImageAsJSON() {
 	resultArray=()
 
 	#the root URL
-	url="www.google.com/search?q=$keyword&tbm=isch"
+	url="www.google.com/search?q=$keyword&tbm=isch&tbs="
 
-
+	#parse quality param
 	if [[ $quality == "high" ]]; then
-		url="$url&tbs=$3,isz:l"
+		url=$url"isz:l"
 	elif [[ $quality == "medium" ]]; then
-		url="$url&tbs=$3,isz:m"
-		#quality
+		url=$url"isz:m"
 	elif [[ $quality == ge:* ]]; then
 		#mp could be equal xga
 		value=${quality#*ge:}
 		#if is number
 		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
 
-		url="$url&tbs=$3,isz:lt,islt:$value"
+		url=$url"isz:lt,islt:$value"
 	else
-		url="$url&tbs=$3,isz:ex,iszw:${2%%,*},iszh:${2#*,}"
+		url=$url"isz:ex,iszw:${quality%%,*},iszh:${quality#*,}"
 	fi
+
+	#parse color param
+	[[ -n $color ]] && url="$url,ic:specific,isc:$color"
 
 	$DEBUG && echo -e "URL (paste this on browser): $url\n"
 
@@ -158,7 +160,7 @@ if [[ -z $quality || $quality == "auto" ]]; then
 	read -r quality < <(cat /sys/class/graphics/fb0/virtual_size)
 fi
 
-fetchImages "${argument1// /+}" $quality ic:specific,isc:$color
+fetchImages "${argument1// /+}" $quality $color
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
