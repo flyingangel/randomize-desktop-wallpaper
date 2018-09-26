@@ -19,6 +19,7 @@ DEBUG=true
 #necessary if script is not called from this folder
 source argparser/argparser.sh
 parse_args "$@"
+originalParam="$@"
 
 function isGNOME() {
 	[[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
@@ -63,6 +64,7 @@ function fetchImageAsJSON() {
 	local url value
 	local keyword=$1
 	local quality=$2
+	local color=$3
 
 	resultArray=()
 
@@ -82,11 +84,28 @@ function fetchImageAsJSON() {
 
 		url=$url"isz:lt,islt:$value"
 	else
-		url=$url"isz:ex,iszw:${quality%%,*},iszh:${quality#*,}"
+		value=${quality#*eq:}
+		url=$url"isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	fi
 
 	#parse color param
-	[[ -n $color ]] && url="$url,ic:specific,isc:$color"
+	if [[ -n $color ]]; then
+		if [[ $color == "color" ]]; then
+			url="$url,ic:color"
+		elif [[ $color == "grayscale" ]]; then
+			url="$url,ic:gray"
+		elif [[ $color == "transparent" ]]; then
+			url="$url,ic:trans"
+		else
+			url="$url,ic:specific,isc:$color"
+		fi
+	fi
+
+	#if test mode, just display the url
+	if [[ $TEST == true ]]; then
+		echo -e "$0 $originalParam => $url"
+		exit
+	fi
 
 	$DEBUG && echo -e "URL (paste this on browser): $url\n"
 
@@ -160,7 +179,7 @@ if [[ -z $quality || $quality == "auto" ]]; then
 	read -r quality < <(cat /sys/class/graphics/fb0/virtual_size)
 fi
 
-fetchImages "${argument1// /+}" $quality $color
+fetchImages "${argument1// /+}" $quality "$color"
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
