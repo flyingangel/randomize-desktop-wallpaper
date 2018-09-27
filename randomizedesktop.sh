@@ -37,7 +37,7 @@ function reconf() {
 		if [[ $line != "Image=file://"* ]]; then
 			echo $line >>$output
 		else
-			rm ${line#*Image=file://}*
+			[[ ${line#*Image=file://} =~ .cache ]] && rm ${line#*Image=file://}*
 			echo "$1" >>$output
 		fi
 	done <"$config"
@@ -73,31 +73,31 @@ function fetchImageAsJSON() {
 
 	#parse quality param
 	if [[ $quality == "high" ]]; then
-		url=$url"isz:l"
+		url+="isz:l"
 	elif [[ $quality == "medium" ]]; then
-		url=$url"isz:m"
+		url+="isz:m"
 	elif [[ $quality == ge:* ]]; then
 		#mp could be equal xga
 		value=${quality#*ge:}
 		#if is number
 		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
 
-		url=$url"isz:lt,islt:$value"
+		url+="isz:lt,islt:$value"
 	else
 		value=${quality#*eq:}
-		url=$url"isz:ex,iszw:${value%%,*},iszh:${value#*,}"
+		url+="isz:ex,iszw:${value%%,*},iszh:${value#*,}"
 	fi
 
 	#parse color param
 	if [[ -n $color ]]; then
 		if [[ $color == "color" ]]; then
-			url="$url,ic:color"
+			url+=",ic:color"
 		elif [[ $color == "grayscale" ]]; then
-			url="$url,ic:gray"
+			url+=",ic:gray"
 		elif [[ $color == "transparent" ]]; then
-			url="$url,ic:trans"
+			url+=",ic:trans"
 		else
-			url="$url,ic:specific,isc:$color"
+			url+=",ic:specific,isc:$color"
 		fi
 	fi
 
@@ -158,6 +158,8 @@ function pickRandomImage() {
 	size=${#images[@]}
 	index=$((RANDOM % "$size"))
 	result=${images[$index]}
+	# If url doesn't end in an image, TRY AGAIN FFS!!!!!!!!
+	[[ ! $result =~ .*g$ ]] && pickRandomImage
 }
 
 function setDesktopBackground() {
