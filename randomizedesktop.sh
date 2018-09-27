@@ -70,19 +70,23 @@ function fetchImageAsJSON() {
 
 	#the root URL
 	url="www.google.com/search?q=$keyword&tbm=isch&tbs="
+	#detect and set aspect ratio
+	if [[ -z $4 && ! -z $3 || ! -z $4 ]]; then
+		[[ "${iarq%%,*}" > "${iarq#*,}" ]] && r=iar:w || r=iar:t
+	fi
 
 	#parse quality param
 	if [[ $quality == "high" ]]; then
-		url+="isz:l"
+		url+="$r,isz:l"
 	elif [[ $quality == "medium" ]]; then
-		url+="isz:m"
+		url+="$r,isz:m"
 	elif [[ $quality == ge:* ]]; then
 		#mp could be equal xga
 		value=${quality#*ge:}
 		#if is number
 		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
 
-		url+="isz:lt,islt:$value"
+		url+="$r,isz:lt,islt:$value"
 	else
 		value=${quality#*eq:}
 		url+="isz:ex,iszw:${value%%,*},iszh:${value#*,}"
@@ -132,7 +136,7 @@ EOF
 function fetchImages() {
 	local temp url
 
-	fetchImageAsJSON $1 $2 $3
+	fetchImageAsJSON $1 $2 $3 $4
 
 	#return if fail
 	[[ $? -eq 1 ]] && return 1
@@ -182,9 +186,11 @@ fi
 if [[ -z $quality || $quality == "auto" ]]; then
 	#screen resolution
 	read -r quality < <(cat /sys/class/graphics/fb0/virtual_size)
+else
+	read -r iarq < <(cat /sys/class/graphics/fb0/virtual_size)
 fi
 
-fetchImages "${argument1// /+}" $quality "$color"
+fetchImages "${argument1// /+}" $quality "$color" $iarq
 
 #exit if 0 result
 if [[ $? -eq 1 ]]; then
