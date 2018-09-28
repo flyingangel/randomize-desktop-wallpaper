@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-DEBUG=true
-
 #necessary if script is not called from this folder
 source argparser/argparser.sh
 parse_args "$@"
@@ -111,8 +109,6 @@ function fetchImageAsJSON() {
 		exit
 	fi
 
-	$DEBUG && echo -e "URL (paste this on browser): $url\n"
-
 	useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
 	#request to server
 	wget=$(
@@ -121,7 +117,6 @@ Request: wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n
 EOF
 	)
 	imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http')
-	$DEBUG && echo $wget && echo
 
 	#exit if 0 result
 	[[ ! -z $imagelink ]] || return 1
@@ -150,8 +145,6 @@ function fetchImages() {
 		url=${temp##*|}
 		[[ $url =~ "?" ]] && url=${url%%"?"*}
 		images+=("$url")
-
-		if $DEBUG; then echo -e "Found $url"; fi
 	done
 }
 
@@ -171,8 +164,6 @@ function setDesktopBackground() {
 	elif isPLASMA; then
 		setPlasmaWall "$1"
 	fi
-
-	$DEBUG && echo && echo "Set $1 as background"
 }
 
 checkCompatibility || exit 1
