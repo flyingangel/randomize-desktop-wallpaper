@@ -70,7 +70,7 @@ function fetchImageAsJSON() {
 	url="www.google.com/search?q=$keyword&tbm=isch&tbs="
 	#detect and set aspect ratio
 	if [[ ! -z $4 ]]; then
-		[[ "${iar%%,*}" > "${iar#*,}" ]] && r=iar:w || r=iar:t
+		[[ "${4%%,*}" > "${4#*,}" ]] && r=iar:w || r=iar:t
 	fi
 
 	#parse quality param
