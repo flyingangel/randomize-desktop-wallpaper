@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#necessary if script is not called from this folder
+#set folder of this script as root, necessary if script is not called from this folder
+cd -P -- "$(dirname -- "$0")"
+
 source argparser/argparser.sh
 parse_args "$@"
 originalParam="$@"
