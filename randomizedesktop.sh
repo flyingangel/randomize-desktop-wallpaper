@@ -167,7 +167,8 @@ function pickRandomImage() {
 
 function exportDBUS() {
 	PID=$(pgrep gnome-session | head -n1)
-	export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$PID/environ | cut -d= -f2-)
+	DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$PID/environ | cut -d= -f2-)
+	export DBUS_SESSION_BUS_ADDRESS
 }
 
 function setDesktopBackground() {
