@@ -22,7 +22,12 @@ parse_args "$@"
 originalParam="$@"
 
 function isGNOME() {
-	[[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || return 1
+	[[ $XDG_CURRENT_DESKTOP == GNOME ]] || [[ $XDG_CURRENT_DESKTOP == ubuntu:GNOME ]] || hasGnomeShell || return 1
+}
+
+function hasGnomeShell() {
+	gnomeshell=$(ps -a | grep gnome-shell)
+	[[ -n $gnomeshell ]] && return 0 || return 1
 }
 
 function isPLASMA() {
@@ -160,8 +165,14 @@ function pickRandomImage() {
 	[[ ! $result =~ .*g$ ]] && pickRandomImage
 }
 
+function exportDBUS() {
+	PID=$(pgrep gnome-session | head -n1)
+	export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$PID/environ | cut -d= -f2-)
+}
+
 function setDesktopBackground() {
 	if isGNOME; then
+		exportDBUS &>/dev/null
 		gsettings set org.gnome.desktop.background picture-uri "$1"
 	elif isPLASMA; then
 		setPlasmaWall "$1"
