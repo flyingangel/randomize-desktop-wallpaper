@@ -15,7 +15,7 @@
 # limitations under the License.
 
 #set folder of this script as root, necessary if script is not called from this folder
-cd -P -- "$(dirname -- "$0")"
+cd -P -- "$(dirname -- "$0")" || exit
 
 source argparser/argparser.sh
 parse_args "$@"
@@ -40,9 +40,9 @@ function reconf() {
 	[[ ! -e $output ]] || rm $output
 	while IFS= read line; do
 		if [[ $line != "Image=file://"* ]]; then
-			echo $line >>$output
+			echo "$line" >>$output
 		else
-			[[ ${line#*Image=file://} =~ .cache ]] && rm ${line#*Image=file://}*
+			[[ ${line#*Image=file://} =~ .cache ]] && rm "${line#*Image=file://}"*
 			echo "$1" >>$output
 		fi
 	done <"$config"
@@ -52,7 +52,7 @@ function reconf() {
 }
 
 function setPlasmaWall() {
-	wget --directory-prefix=$HOME/.cache $1 2>/dev/null
+	wget --directory-prefix="$HOME"/.cache "$1" 2>/dev/null
 	wall=~/.cache/"${1##*/}"
 	reconf "Image=file://$wall"
 }
@@ -70,43 +70,31 @@ function fetchImageAsJSON() {
 	local keyword=$1
 	local quality=$2
 	local color=$3
-
+	local API_KEY="AIzaSyCHB4YuGiB2DRlz1tGfBak7otMVBapm8gg"
+	local CX="e76a6e0aaee8c4f39"
 	resultArray=()
 
 	#the root URL
-	url="www.google.com/search?q=$keyword&tbm=isch&tbs="
-	#detect and set aspect ratio
-	if [[ ! -z $4 ]]; then
-		[[ ${4%%,*} -gt ${4#*,} ]] && r=iar:w || r=iar:t
+	url="https://www.googleapis.com/customsearch/v1?q=${keyword}&key=${API_KEY}&cx=${CX}&searchType=image"
+
+	# Detect and set aspect ratio
+	if [[ -n $4 ]]; then
+		[[ ${4%%,*} -gt ${4#*,} ]] && r="&imgAspect=wide" || r="&imgAspect=tall"
+		url+="$r"
 	fi
 
-	#parse quality param
-	if [[ $quality == "high" ]]; then
-		url+="$r,isz:l"
-	elif [[ $quality == "medium" ]]; then
-		url+="$r,isz:m"
-	elif [[ $quality == ge:* ]]; then
-		#mp could be equal xga
-		value=${quality#*ge:}
-		#if is number
-		[[ $value =~ ^[0-9]+$ ]] && value="${value}mp"
+	url+="&imgSize=${quality}"
 
-		url+="$r,isz:lt,islt:$value"
-	else
-		value=${quality#*eq:}
-		url+="isz:ex,iszw:${value%%,*},iszh:${value#*,}"
-	fi
-
-	#parse color param
+	# Parse color param
 	if [[ -n $color ]]; then
 		if [[ $color == "color" ]]; then
-			url+=",ic:color"
+			url+="&imgColorType=color"
 		elif [[ $color == "grayscale" ]]; then
-			url+=",ic:gray"
+			url+="&imgColorType=gray"
 		elif [[ $color == "transparent" ]]; then
-			url+=",ic:trans"
+			url+="&imgColorType=trans"
 		else
-			url+=",ic:specific,isc:$color"
+			url+="&imgDominantColor=${color}"
 		fi
 	fi
 
@@ -118,11 +106,9 @@ function fetchImageAsJSON() {
 
 	useragent='Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'
 	#request to server
-	wget=$(
-		cat <<EOF
-Request: wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http' | head -n $count
+	cat <<EOF
+Request: wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http'
 EOF
-	)
 	imagelink=$(wget -e robots=off --user-agent "$useragent" -qO - "$url" | sed 's/</\n</g' | grep 'class="*rg_meta' | sed 's/">{"/">\n{"/g' | grep 'http')
 
 	#exit if 0 result
@@ -167,7 +153,7 @@ function pickRandomImage() {
 
 function exportDBUS() {
 	PID=$(pgrep gnome-session | head -n1)
-	DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$PID/environ | cut -d= -f2-)
+	DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/"$PID"/environ | cut -d= -f2-)
 	export DBUS_SESSION_BUS_ADDRESS
 }
 

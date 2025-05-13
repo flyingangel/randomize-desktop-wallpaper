@@ -88,6 +88,4 @@ user=$(whoami)
 line="$interval\t$user\tbash $currentDir/randomizedesktop.sh $keyword $quality"
 echo -e "$line" >/etc/cron.d/randomize-desktop
 echo "Custom interval can be changed in /etc/cron.d/randomize-desktop"
-echo -e "\tnano /etc/cron.d/randomize-desktop"
-echo
 echo "Done"
